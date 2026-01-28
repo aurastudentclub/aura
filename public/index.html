@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AURA</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fdf2d2;
+      overflow: hidden;
+      height: 100%;
+      font-family: sans-serif;
+      cursor: none; /* Hide default cursor for immersive effect */
+    }
+    canvas {
+      display: none; /* Initially hide the canvas */
+      display: block;
+    }
+    #mainContent {
+      opacity: 0;
+      position: absolute;
+      top: 70%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #0a1b56;
+      text-align: center;
+      font-size: 22px;
+      max-width: 700px;
+      transition: opacity 1.5s ease;
+    }
+    #mainContent.show {
+      opacity: 1;
+    }
+
+    /* --- NEW: Styles for the Launch Button --- */
+    #launch-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      transition: opacity 0.5s ease-out;
+    }
+    #launchBtn {
+      padding: 18px 40px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #0a1b56;
+      background-color: transparent;
+      border: 3px solid #0a1b56;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    #launchBtn:hover {
+      background-color: #0a1b56;
+      color: #fdf2d2;
+      box-shadow: 0 0 25px rgba(10, 27, 86, 0.5);
+      transform: scale(1.05);
+    }
+    /* --- End of New Styles --- */
+
+    /* Custom Cursor Styles */
+    .cursor-inner {
+      width: 8px;
+      height: 8px;
+      background-color: #0a1b56;
+      position: fixed;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      z-index: 9999;
+      pointer-events: none;
+      transition: width 0.2s, height 0.2s, background-color 0.2s;
+    }
+    .cursor-outer {
+      width: 35px;
+      height: 35px;
+      border: 2px solid #1d8cf8;
+      position: fixed;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      z-index: 9998;
+      pointer-events: none;
+      transition: all 0.1s ease-out; /* Smoother follow */
+    }
+    .cursor-inner.hover, .cursor-outer.hover {
+        transform: scale(1.5);
+    }
+
+    /* Ripple Effect Styles */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background-color: rgba(10, 27, 86, 0.4);
+      transform: scale(0);
+      animation: ripple-animation 0.6s linear forwards;
+      pointer-events: none;
+      z-index: 9997;
+    }
+    @keyframes ripple-animation {
+      to {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="launch-container">
+    <button id="launchBtn">Launch AURA</button>
+  </div>
+
+  <canvas id="canvas" style="display: none;"></canvas> <div class="cursor-inner" id="cursor-inner"></div>
+  <div class="cursor-outer" id="cursor-outer"></div>
+
+  <div id="mainContent">
+    <h1>Welcome to AURA Student Club</h1>
+    <p>Elevate Minds - Illuminate Future</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const launchContainer = document.getElementById('launch-container');
+    const launchBtn = document.getElementById('launchBtn');
+
+    // --- MODIFIED: Animation logic is now wrapped in a function to be called later ---
+    function startAnimation() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const word = "AURA";
+        const fontSize = 180;
+        let polygons = [];
+        let textPolygons = [];
+        let stage = 0; // 0: polygon formation, 1: glow, 2: fade & show content, 3: redirect
+        let frame = 0;
+        let auraAlpha = 0;
+        let glowPulse = 0;
+        let glowIncreasing = true;
+
+        let mouse = { x: -1000, y: -1000 };
+        const cursorInner = document.getElementById("cursor-inner");
+        const cursorOuter = document.getElementById("cursor-outer");
+        const interactiveElements = document.querySelectorAll("a, label, button, h1, p");
+
+        const sparkleColors = ["#f0c420", "#1d8cf8", "#e84d9b", "#b65fcf"];
+        let sparkles = [];
+        for (let i = 0; i < 120; i++) {
+            sparkles.push({
+                x: Math.random() * canvas.width, y: Math.random() * canvas.height,
+                r: Math.random() * 1.5 + 0.5, dx: Math.random() * 0.4 - 0.2,
+                dy: Math.random() * 0.4 - 0.2, color: sparkleColors[Math.floor(Math.random() * sparkleColors.length)],
+                opacity: Math.random() * 0.5 + 0.3
+            });
+        }
+
+        function drawSparkles() {
+            sparkles.forEach(s => {
+                const distX = s.x - mouse.x;
+                const distY = s.y - mouse.y;
+                const dist = Math.sqrt(distX * distX + distY * distY);
+                if (dist < 80) {
+                    const angle = Math.atan2(distY, distX);
+                    s.x += Math.cos(angle) * 2;
+                    s.y += Math.sin(angle) * 2;
+                } else {
+                    s.x += s.dx; s.y += s.dy;
+                }
+                if (s.x < 0) s.x = canvas.width; if (s.x > canvas.width) s.x = 0;
+                if (s.y < 0) s.y = canvas.height; if (s.y > canvas.height) s.y = 0;
+
+                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 2 * Math.PI);
+                ctx.fillStyle = s.color; ctx.shadowColor = s.color; ctx.shadowBlur = 10;
+                ctx.globalAlpha = s.opacity; ctx.fill(); ctx.globalAlpha = 1;
+            });
+        }
+
+        function createTextPolygons() {
+            const offCanvas = document.createElement("canvas");
+            const offCtx = offCanvas.getContext("2d");
+            offCanvas.width = canvas.width; offCanvas.height = canvas.height;
+            offCtx.font = `bold ${fontSize}px Arial`; offCtx.textAlign = "center";
+            offCtx.textBaseline = "middle"; offCtx.fillStyle = "black";
+            offCtx.fillText(word, canvas.width / 2, canvas.height / 2);
+            const data = offCtx.getImageData(0, 0, canvas.width, canvas.height).data;
+            for (let y = 0; y < canvas.height; y += 8) {
+                for (let x = 0; x < canvas.width; x += 8) {
+                    if (data[(y * canvas.width + x) * 4 + 3] > 150) {
+                        textPolygons.push({ x, y });
+                    }
+                }
+            }
+        }
+
+        function spawnPolygons() {
+            const corners = [
+                { x: 0, y: 0 }, { x: canvas.width, y: 0 },
+                { x: 0, y: canvas.height }, { x: canvas.width, y: canvas.height }
+            ];
+            for (let i = 0; i < textPolygons.length; i++) {
+                const corner = corners[i % 4];
+                const target = textPolygons[i];
+                polygons.push({ x: corner.x, y: corner.y, tx: target.x, ty: target.y });
+            }
+        }
+
+        function drawPolygonTrail(p) {
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty);
+            ctx.strokeStyle = "rgba(10, 27, 86, 0.2)"; ctx.lineWidth = 1.2;
+            ctx.shadowColor = "#0a1b56"; ctx.shadowBlur = 8; ctx.stroke();
+        }
+
+        function drawSolidText(alpha = 1) {
+            ctx.save(); ctx.globalAlpha = alpha; ctx.shadowColor = "#0a1b56";
+            ctx.shadowBlur = 30 + glowPulse; ctx.fillStyle = "#0a1b56";
+            ctx.font = `bold ${fontSize}px Arial`; ctx.textAlign = "center";
+            ctx.textBaseline = "middle"; ctx.fillText(word, canvas.width / 2, canvas.height / 2);
+            ctx.restore();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSparkles();
+
+            if (stage === 0) {
+                let allComplete = true;
+                polygons.forEach(p => {
+                    const dx = p.tx - p.x; const dy = p.ty - p.y;
+                    p.x += dx * 0.05; p.y += dy * 0.05;
+                    drawPolygonTrail(p);
+                    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) allComplete = false;
+                });
+                if (allComplete) { stage = 1; frame = 0; }
+            } else if (stage === 1) {
+                auraAlpha = 1;
+                if (glowIncreasing) { glowPulse += 1.2; if (glowPulse > 40) glowIncreasing = false; }
+                else { glowPulse -= 1.2; if (glowPulse < 0) glowIncreasing = true; }
+                drawSolidText(auraAlpha);
+                frame++;
+                if (frame > 90) { stage = 2; frame = 0; }
+            } else if (stage === 2) {
+                auraAlpha -= 0.015;
+                if (auraAlpha < 0) auraAlpha = 0;
+                drawSolidText(auraAlpha);
+                document.getElementById("mainContent").classList.add("show");
+                frame++;
+                // Wait for ~2.5 seconds (150 frames) then change stage
+                if (frame > 150) {
+                    stage = 3;
+                }
+            } else if (stage === 3) {
+                // NEW: Redirect to home page
+                window.location.href = 'home.html';
+                stage = 4; // Stop animation loop from redirecting again
+            }
+
+            cursorInner.style.left = `${mouse.x}px`; cursorInner.style.top = `${mouse.y}px`;
+            cursorOuter.style.left = `${mouse.x}px`; cursorOuter.style.top = `${mouse.y}px`;
+            
+            if(stage < 4) requestAnimationFrame(animate);
+        }
+
+        // Initialize and start the animation sequence
+        createTextPolygons();
+        spawnPolygons();
+        animate();
+
+        // Event listeners for mouse and cursor effects
+        window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
+        interactiveElements.forEach(el => {
+            el.addEventListener("mouseenter", () => {
+                cursorInner.classList.add("hover"); cursorOuter.classList.add("hover");
+            });
+            el.addEventListener("mouseleave", () => {
+                cursorInner.classList.remove("hover"); cursorOuter.classList.remove("hover");
+            });
+        });
+        document.addEventListener("click", e => {
+            const ripple = document.createElement("span");
+            ripple.classList.add("ripple"); document.body.appendChild(ripple);
+            ripple.style.left = `${e.clientX - ripple.offsetWidth / 2}px`;
+            ripple.style.top = `${e.clientY - ripple.offsetHeight / 2}px`;
+            ripple.addEventListener("animationend", () => ripple.remove());
+        });
+    }
+
+    // --- NEW: Event listener for the launch button ---
+    launchBtn.addEventListener('click', () => {
+        // Fade out the button container
+        launchContainer.style.opacity = '0';
+        
+        // After fade out, remove it and start the main animation
+        launchContainer.addEventListener('transitionend', () => {
+            launchContainer.remove();
+            canvas.style.display = 'block'; // Show the canvas
+            startAnimation(); // Start the animation
+        }, { once: true }); // Ensure this listener runs only once
+    });
+
+  </script>
+</body>
+</html>
