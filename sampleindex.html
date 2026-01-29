@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AURA</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fdf2d2;
+      overflow: hidden;
+      height: 100%;
+      font-family: 'Arial', sans-serif;
+      cursor: none;
+    }
+    canvas {
+      display: none;
+      display: block;
+    }
+    #mainContent {
+      opacity: 0;
+      position: absolute;
+      top: 70%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #0a1b56;
+      text-align: center;
+      font-size: 24px;
+      max-width: 800px;
+      transition: opacity 2s ease;
+      text-shadow: 0 2px 10px rgba(10, 27, 86, 0.3);
+    }
+    #mainContent.show {
+      opacity: 1;
+    }
+    #mainContent h1 {
+      font-size: 48px;
+      margin-bottom: 20px;
+      background: linear-gradient(45deg, #0a1b56, #1d8cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: titleGlow 3s ease-in-out infinite alternate;
+    }
+    @keyframes titleGlow {
+      0% { filter: drop-shadow(0 0 5px rgba(29, 140, 248, 0.5)); }
+      100% { filter: drop-shadow(0 0 20px rgba(29, 140, 248, 0.8)); }
+    }
+
+    /* Launch Button Styles */
+    #launch-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10000;
+      transition: opacity 0.8s ease-out;
+      background: radial-gradient(circle at center, rgba(253, 242, 210, 0.95) 0%, rgba(253, 242, 210, 1) 100%);
+    }
+    #launchBtn {
+      padding: 20px 50px;
+      font-size: 28px;
+      font-weight: bold;
+      color: #0a1b56;
+      background: linear-gradient(135deg, transparent 0%, rgba(29, 140, 248, 0.1) 50%, transparent 100%);
+      border: 3px solid #0a1b56;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    #launchBtn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(29, 140, 248, 0.2), transparent);
+      transition: left 0.6s;
+    }
+    #launchBtn:hover::before {
+      left: 100%;
+    }
+    #launchBtn:hover {
+      background: linear-gradient(135deg, #0a1b56 0%, #1d8cf8 100%);
+      color: #fdf2d2;
+      box-shadow: 0 0 40px rgba(29, 140, 248, 0.6), 0 0 80px rgba(10, 27, 86, 0.3);
+      transform: scale(1.08) translateY(-2px);
+      border-color: #1d8cf8;
+    }
+
+    /* Enhanced Cursor Styles */
+    .cursor-inner {
+      width: 6px;
+      height: 6px;
+      background-color: #0a1b56;
+      position: fixed;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      z-index: 9999;
+      pointer-events: none;
+      transition: all 0.15s ease-out;
+      box-shadow: 0 0 10px rgba(10, 27, 86, 0.5);
+    }
+    .cursor-outer {
+      width: 40px;
+      height: 40px;
+      border: 2px solid #1d8cf8;
+      position: fixed;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      z-index: 9998;
+      pointer-events: none;
+      transition: all 0.08s ease-out;
+      background: rgba(29, 140, 248, 0.05);
+    }
+    .cursor-inner.hover {
+      transform: translate(-50%, -50%) scale(2);
+      background-color: #1d8cf8;
+    }
+    .cursor-outer.hover {
+      transform: translate(-50%, -50%) scale(1.8);
+      border-color: #e84d9b;
+      background: rgba(232, 77, 155, 0.1);
+    }
+
+    /* Enhanced Ripple Effect */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(29, 140, 248, 0.6) 0%, rgba(10, 27, 86, 0.3) 50%, transparent 100%);
+      transform: scale(0);
+      animation: ripple-animation 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      pointer-events: none;
+      z-index: 9997;
+    }
+    @keyframes ripple-animation {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(3);
+        opacity: 0;
+      }
+    }
+
+    /* Loading indicator for launch button */
+    .loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin: -10px 0 0 -10px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="launch-container">
+    <button id="launchBtn">Launch AURA</button>
+  </div>
+
+  <canvas id="canvas" style="display: none;"></canvas>
+  <div class="cursor-inner" id="cursor-inner"></div>
+  <div class="cursor-outer" id="cursor-outer"></div>
+
+  <div id="mainContent">
+    <h1>Welcome to AURA Student Club</h1>
+    <p>Elevate Minds - Illuminate Future</p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const launchContainer = document.getElementById('launch-container');
+    const launchBtn = document.getElementById('launchBtn');
+
+    function startAnimation() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const word = "AURA";
+        let stage = 0; // 0: liquid drops, 1: droplet merge, 2: word crystallize, 3: completion
+        let frame = 0;
+        
+        let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        const cursorInner = document.getElementById("cursor-inner");
+        const cursorOuter = document.getElementById("cursor-outer");
+        const interactiveElements = document.querySelectorAll("a, label, button, h1, p");
+
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const fontSize = Math.min(window.innerWidth * 0.15, 200);
+
+        // Liquid drop system
+        let drops = [];
+        let crystals = [];
+        let wordPoints = [];
+
+        // Create text outline points
+        function createWordPoints() {
+            const offCanvas = document.createElement("canvas");
+            const offCtx = offCanvas.getContext("2d");
+            offCanvas.width = canvas.width;
+            offCanvas.height = canvas.height;
+            
+            offCtx.font = `bold ${fontSize}px Arial`;
+            offCtx.textAlign = "center";
+            offCtx.textBaseline = "middle";
+            offCtx.fillStyle = "white";
+            offCtx.fillText(word, centerX, centerY);
+            
+            const imageData = offCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let y = 0; y < canvas.height; y += 3) {
+                for (let x = 0; x < canvas.width; x += 3) {
+                    const index = (y * canvas.width + x) * 4;
+                    if (data[index + 3] > 128) {
+                        wordPoints.push({ x, y });
+                    }
+                }
+            }
+        }
+
+        // Initialize liquid drops falling from sky
+        function initDrops() {
+            const colors = ['#1d8cf8', '#e84d9b', '#b65fcf', '#f0c420'];
+            
+            for (let i = 0; i < 100; i++) {
+                drops.push({
+                    x: Math.random() * canvas.width,
+                    y: -Math.random() * 500,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: Math.random() * 3 + 2,
+                    size: Math.random() * 8 + 3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    opacity: 0.8,
+                    landed: false,
+                    merge: false,
+                    targetX: 0,
+                    targetY: 0,
+                    trail: []
+                });
+            }
+        }
+
+        function drawDrop(drop) {
+            // Add to trail
+            drop.trail.push({ x: drop.x, y: drop.y });
+            if (drop.trail.length > 10) drop.trail.shift();
+            
+            // Draw trail
+            for (let i = 0; i < drop.trail.length - 1; i++) {
+                const alpha = (i / drop.trail.length) * drop.opacity * 0.3;
+                const size = drop.size * (i / drop.trail.length) * 0.5;
+                
+                ctx.beginPath();
+                ctx.arc(drop.trail[i].x, drop.trail[i].y, size, 0, Math.PI * 2);
+                ctx.fillStyle = drop.color;
+                ctx.globalAlpha = alpha;
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // Draw main drop with liquid effect
+            const gradient = ctx.createRadialGradient(
+                drop.x - drop.size * 0.3, drop.y - drop.size * 0.3, 0,
+                drop.x, drop.y, drop.size
+            );
+            gradient.addColorStop(0, drop.color);
+            gradient.addColorStop(0.7, drop.color + '80');
+            gradient.addColorStop(1, drop.color + '20');
+            
+            ctx.beginPath();
+            ctx.arc(drop.x, drop.y, drop.size, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.globalAlpha = drop.opacity;
+            ctx.fill();
+            
+            // Add highlight
+            ctx.beginPath();
+            ctx.arc(drop.x - drop.size * 0.3, drop.y - drop.size * 0.3, drop.size * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.fill();
+            
+            ctx.globalAlpha = 1;
+        }
+
+        function drawFloatingBubbles() {
+            const time = frame * 0.02;
+            
+            for (let i = 0; i < 30; i++) {
+                const x = centerX + Math.sin(time + i * 0.5) * 200;
+                const y = centerY + Math.cos(time + i * 0.3) * 150;
+                const size = 2 + Math.sin(time * 2 + i) * 1;
+                const alpha = 0.1 + Math.sin(time * 3 + i) * 0.1;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(29, 140, 248, ${alpha})`;
+                ctx.fill();
+            }
+        }
+
+        function drawLiquidText() {
+            if (wordPoints.length === 0) return;
+            
+            ctx.save();
+            
+            // Create liquid text effect
+            const time = frame * 0.03;
+            
+            for (let i = 0; i < wordPoints.length; i += 2) {
+                const point = wordPoints[i];
+                const waveOffset = Math.sin(time + i * 0.01) * 3;
+                const alpha = 0.6 + Math.sin(time * 2 + i * 0.02) * 0.4;
+                
+                const gradient = ctx.createRadialGradient(
+                    point.x, point.y + waveOffset, 0,
+                    point.x, point.y + waveOffset, 8
+                );
+                gradient.addColorStop(0, `rgba(10, 27, 86, ${alpha})`);
+                gradient.addColorStop(0.5, `rgba(29, 140, 248, ${alpha * 0.7})`);
+                gradient.addColorStop(1, `rgba(182, 95, 207, ${alpha * 0.3})`);
+                
+                ctx.beginPath();
+                ctx.arc(point.x, point.y + waveOffset, 2, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        }
+
+        function animate() {
+            // Clear with gradient background
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGradient.addColorStop(0, '#fdf2d2');
+            bgGradient.addColorStop(1, 'rgba(253, 242, 210, 0.95)');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawFloatingBubbles();
+
+            if (stage === 0) {
+                // Drops falling
+                drops.forEach(drop => {
+                    if (!drop.landed) {
+                        drop.x += drop.vx;
+                        drop.y += drop.vy;
+                        drop.vy += 0.1; // gravity
+                        
+                        // Check if landed
+                        if (drop.y > centerY + 100) {
+                            drop.landed = true;
+                            drop.vy = 0;
+                            drop.vx *= 0.5;
+                        }
+                    }
+                    drawDrop(drop);
+                });
+                
+                frame++;
+                if (frame > 200) {
+                    stage = 1;
+                    frame = 0;
+                }
+                
+            } else if (stage === 1) {
+                // Drops merging toward text shape
+                drops.forEach((drop, index) => {
+                    if (drop.landed && !drop.merge) {
+                        const targetPoint = wordPoints[index % wordPoints.length];
+                        if (targetPoint) {
+                            drop.targetX = targetPoint.x;
+                            drop.targetY = targetPoint.y;
+                            drop.merge = true;
+                        }
+                    }
+                    
+                    if (drop.merge) {
+                        const dx = drop.targetX - drop.x;
+                        const dy = drop.targetY - drop.y;
+                        drop.x += dx * 0.05;
+                        drop.y += dy * 0.05;
+                        drop.size *= 0.995;
+                    }
+                    
+                    if (drop.size > 0.5) {
+                        drawDrop(drop);
+                    }
+                });
+                
+                frame++;
+                if (frame > 180) {
+                    stage = 2;
+                    frame = 0;
+                }
+                
+            } else if (stage === 2) {
+                // Crystallize into solid text
+                drawLiquidText();
+                
+                frame++;
+                if (frame > 120) {
+                    stage = 3;
+                    frame = 0;
+                }
+                
+            } else if (stage === 3) {
+                // Fade and show content
+                const fadeAlpha = Math.max(0, 1 - frame / 80);
+                if (fadeAlpha > 0) {
+                    ctx.globalAlpha = fadeAlpha;
+                    drawLiquidText();
+                    ctx.globalAlpha = 1;
+                }
+                
+                if (frame === 40) {
+                    document.getElementById("mainContent").classList.add("show");
+                }
+                
+                frame++;
+                if (frame > 150) {
+                    stage = 4;
+                    // window.location.href = 'home.html';
+                }
+            }
+
+            // Cursor following
+            const targetX = mouse.x;
+            const targetY = mouse.y;
+            const currentX = parseFloat(cursorInner.style.left) || targetX;
+            const currentY = parseFloat(cursorInner.style.top) || targetY;
+            
+            const newX = currentX + (targetX - currentX) * 0.15;
+            const newY = currentY + (targetY - currentY) * 0.15;
+            
+            cursorInner.style.left = `${newX}px`;
+            cursorInner.style.top = `${newY}px`;
+            cursorOuter.style.left = `${targetX}px`;
+            cursorOuter.style.top = `${targetY}px`;
+            
+            if (stage < 4) requestAnimationFrame(animate);
+        }
+
+        // Initialize
+        createWordPoints();
+        initDrops();
+        animate();
+
+        // Mouse tracking
+        let mouseTimeout;
+        window.onmousemove = e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+            
+            clearTimeout(mouseTimeout);
+            cursorInner.style.opacity = '1';
+            cursorOuter.style.opacity = '1';
+            
+            mouseTimeout = setTimeout(() => {
+                cursorInner.style.opacity = '0.5';
+                cursorOuter.style.opacity = '0.5';
+            }, 2000);
+        };
+
+        interactiveElements.forEach(el => {
+            el.addEventListener("mouseenter", () => {
+                cursorInner.classList.add("hover");
+                cursorOuter.classList.add("hover");
+            });
+            el.addEventListener("mouseleave", () => {
+                cursorInner.classList.remove("hover");
+                cursorOuter.classList.remove("hover");
+            });
+        });
+
+        document.addEventListener("click", e => {
+            const ripple = document.createElement("span");
+            ripple.classList.add("ripple");
+            ripple.style.width = ripple.style.height = "60px";
+            ripple.style.left = `${e.clientX - 30}px`;
+            ripple.style.top = `${e.clientY - 30}px`;
+            document.body.appendChild(ripple);
+            
+            ripple.addEventListener("animationend", () => ripple.remove());
+        });
+    }
+
+    // Launch button
+    launchBtn.addEventListener('click', () => {
+        launchBtn.textContent = '';
+        launchBtn.classList.add('loading');
+        
+        setTimeout(() => {
+            launchContainer.style.opacity = '0';
+            
+            launchContainer.addEventListener('transitionend', () => {
+                launchContainer.remove();
+                canvas.style.display = 'block';
+                startAnimation();
+            }, { once: true });
+        }, 800);
+    });
+
+    window.addEventListener('load', () => {
+        launchBtn.style.animation = 'pulse 2s infinite';
+    });
+
+  </script>
+</body>
+</html>
