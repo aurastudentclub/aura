@@ -20,6 +20,7 @@
 
     <!-- AURA Theme + Animation Styles -->
     <style>
+
         /* Team Toggle Visibility */
         .team-content {
             display: none;
@@ -28,6 +29,7 @@
         .team-content.active {
             display: block;
         }
+
 
         :root {
             --brand-blue: #003366;
@@ -56,7 +58,7 @@
                 opacity: 0;
             }
         }
-        
+
 
         #tsparticles {
             position: fixed;
@@ -836,6 +838,7 @@
                     Meet the Team</h2>
                 
                 <!-- Team Toggle Buttons -->
+
                 <div class="team-toggle">
                     <button class="team-btn active" data-target="current-team">Current Team</button>
                     <button class="team-btn" data-target="past-team">Past Team</button>
@@ -939,6 +942,17 @@
                     <h3 class="text-2xl font-bold text-center text-brand-blue mb-8" data-aos="fade-up">2025-2026 Academic Year</h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
                         <!-- Past Team Members -->
+
+                <div class="team-toggle" data-aos="fade-up" data-aos-delay="100">
+                    <button id="current-team-btn" class="team-btn active" data-target="current-team">Current Team</button>
+                    <button id="former-team-btn" class="team-btn" data-target="former-team">Former Team</button>
+                </div>
+
+                <!-- Current Team Content -->
+                <div id="current-team" class="team-content active">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+                        <!-- Current Team Members -->
+
                         <div class="text-center" data-aos="zoom-in" data-aos-delay="200">
                             <div class="group relative w-36 h-36 mx-auto rounded-full border-4 border-brand-gold shadow-lg overflow-hidden transition-transform duration-300 hover:scale-105 hover:shadow-2xl">
                                 <img src="images/president-removebg-preview.png" alt="K. Venkata Jagapathibabu"
